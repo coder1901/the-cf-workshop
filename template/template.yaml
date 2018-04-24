@@ -1,10 +1,36 @@
-utputs:
-  webserverIPAddress:
-    Value: !Sub ${webserver.PublicIp}
+Description: Deploys a single webserver instance
+
 Resources:
+  webServer:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+
+    Properties:
+      ImageId: ami-38c09857
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref securityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            yum install -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -s ${AWS::StackId} -r webServer --region ${AWS::Region} -v
+
   securityGroup:
     Type: AWS::EC2::SecurityGroup
-    Properties: 
+    Properties:
       GroupDescription: access web application
       SecurityGroupIngress:
         -
@@ -12,28 +38,8 @@ Resources:
           CidrIp: 0.0.0.0/0
           FromPort: 80
           ToPort: 80
-  webserver:
-    Type: AWS::EC2::Instance
-    Metadata:
-      AWS::Cloudformation::Init:
-        config:
-          packages:
-            yum:
-              httpd: []
-          services:
-            sysvinit:
-              httpd:
-                enabled: true
-                ensureRunning: true
-    Properties:
-      ImageId: ami-38c09857
-      InstanceType: m4.large
-      SecurityGroup:
-        - !Ref securityGroup
-      UserData:
-        Fn::Base64:
-          !Sub |
-           #!/bin/bash -xe
-           yum install -y aws-cfn-bootstrap
-           /opt/bin/aws/cfn-init -s ${AWS::StackId} -r webserver --region ${AWS::Region} -v
 
+
+Outputs:
+  webserverIPAddress:
+    Value: !Sub ${webServer.PublicIp}
